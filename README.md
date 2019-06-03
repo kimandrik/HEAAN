@@ -1,6 +1,6 @@
 # HEAAN
 
-- This version is Asiacrypt2017 implementation. 
+- This version is Asiacrypt2017 implementation. https://www.researchgate.net/publication/321501858_Advances_in_Cryptology_-_ASIACRYPT_2017_23rd_International_Conference_on_the_Theory_and_Applications_of_Cryptology_and_Information_Security_Hong_Kong_China_December_3-7_2017_Proceedings_Part_I
 
 - For the latest version of HEAAN please go to https://github.com/snucrypto/HEAAN
 
