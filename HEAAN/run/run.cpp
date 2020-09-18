@@ -7,162 +7,100 @@
 */
 
 #include "../src/HEAAN.h"
+#include "../src/Ring2Utils.h"
+#include "math.h"
 
 using namespace std;
 using namespace NTL;
 
 int main() {
-	
-	//-----------------------------------------
+	long logN = 15;
+	long logQ = 150;
+	long logp = 40;
+	long logSlots = logN-1;
+	Context context(logN, logQ);
+	SecretKey secretKey(logN, (1<<logN)*2/3);
+//	SecretKey secretKey(logN);
+	Scheme scheme(secretKey, context);
 
-	/*
-	 * Params: logN, logQ, logp, logSlots
-	 * Suggested: 13, 65, 30, 3
-	 */
-//	TestScheme::testEncodeBatch(13, 65, 30, 3);
+	long slots = (1 << logSlots);
+#if 0
+	complex<double>* mvec1 = EvaluatorUtils::randomCircleArray(slots);
+	complex<double>* mvec2 = EvaluatorUtils::randomCircleArray(slots);
+	complex<double>* mvec = new complex<double>[slots];
+	for(long i = 0; i < slots; i++) {
+		mvec[i] = mvec1[i] * mvec2[i];
+	}
+#else
+	complex<double>* mvec = EvaluatorUtils::randomCircleArray(slots);
+#endif
 
-	/*
-	 * Params: logN, logQ, logp
-	 * Suggested: 13, 65, 30
-	 */
-//	TestScheme::testEncodeSingle(13, 150, 30);
+#if 0
+	ZZX exkey, axkey, bxkey;
 
-	/*
-	 * Params: logN, logQ, logp, isComplex
-	 * Suggested: 13, 65, 30, 3
-	 */
-	TestScheme::testBasic(13, 65, 30, 3);
+	NumUtils::sampleUniform2(axkey, context.N, logQ);
+	NumUtils::sampleGauss(exkey, context.N, context.sigma);
+	Ring2Utils::mult(bxkey, secretKey.sx, axkey, context.Q, context.N);
+	Ring2Utils::sub(bxkey, exkey, bxkey, context.Q, context.N);
 
-	/*
-	 * Params: logN, logQ, logp, logSlots
-	 * Suggested: 13, 65, 30, 3
-	 */
+	ZZX mx1 = context.encode(mvec1, slots, logp);
+	ZZX mx2 = context.encode(mvec2, slots, logp);
 
-//	TestScheme::testConjugateBatch(13, 65, 30, 3);
+	Plaintext msg1(mx1, logp, logQ, slots, false);
+	Plaintext msg2(mx2, logp, logQ, slots, false);
 
-	/*
-	 * Params: logN, logQ, logp, logSlots
-	 * Suggested: 13, 65, 30, 3
-	 */
+	ZZX ax1, bx1, vx1, ex1;
 
-//	TestScheme::testimultBatch(13, 65, 30, 3);
+	NumUtils::sampleZO(vx1, context.N);
+	Ring2Utils::mult(ax1, vx1, axkey, context.Q, context.N);
+	NumUtils::sampleGauss(ex1, context.N, context.sigma);
+	Ring2Utils::addAndEqual(ax1, ex1, context.Q, context.N);
 
-	//-----------------------------------------
+	Ring2Utils::mult(bx1, vx1, bxkey, context.Q, context.N);
+	NumUtils::sampleGauss(ex1, context.N, context.sigma);
+	Ring2Utils::addAndEqual(bx1, ex1, context.Q, context.N);
+	Ring2Utils::addAndEqual(bx1, mx1, context.Q, context.N);
 
-	/*
-	 * Params: logN, logQ, logp, rotlogSlots, logSlots, isLeft
-	 * Suggested: 13, 65, 30, 2, 5, true
-	 */
+	Ciphertext cipher1(ax1, bx1, logp, logQ, slots, true);
 
-//	TestScheme::testRotateByPo2Batch(13, 65, 30, 2, 5, true);
-//	TestScheme::testRotateBatch(13, 65, 30, 17, 5, true);
+	ZZX ax2, bx2, vx2, ex2;
 
-	/*
-	 * Params: logN, logQ, logp, logSlots
-	 * Suggested: 13, 65, 30, 3
-	 */
+	NumUtils::sampleZO(vx2, context.N);
+	Ring2Utils::mult(ax2, vx2, axkey, context.Q, context.N);
+	NumUtils::sampleGauss(ex2, context.N, context.sigma);
+	Ring2Utils::addAndEqual(ax2, ex2, context.Q, context.N);
 
-//	TestScheme::testSlotsSum(13, 65, 30, 3);
+	Ring2Utils::mult(bx2, vx2, bxkey, context.Q, context.N);
+	NumUtils::sampleGauss(ex2, context.N, context.sigma);
+	Ring2Utils::addAndEqual(bx2, ex2, context.Q, context.N);
+	Ring2Utils::addAndEqual(bx2, mx2, context.Q, context.N);
 
-	//-----------------------------------------
+	Ciphertext cipher2(ax2, bx2, logp, logQ, slots, true);
 
-	/*
-	 * Params: logN, logQ, logp, logDegree, logSlots
-	 * Suggested: 13, 155, 30, 4, 3
-	 * Suggested: 15, 618, 56, 10, 3
-	 */
+	Ciphertext cipher = scheme.mult(cipher1, cipher2);
+	scheme.reScaleByAndEqual(cipher, logp);
+	complex<double>* dvec = scheme.decrypt(secretKey, cipher);
 
-//	TestScheme::testPowerOf2Batch(13, 155, 30, 4, 3);
+#else
 
-	//-----------------------------------------
+	Ciphertext cipher = scheme.encrypt(mvec, slots, logp, logQ);
 
-	/*
-	 * Params: logN, logQ, logp, degree, logSlots
-	 * Suggested: 13, 155, 30, 13, 3
-	 * Suggested: 15, 618, 56, 903, 3
-	 */
+//	Ciphertext cipher1 = scheme.encrypt(mvec1, slots, logp, logQ);
+//	Ciphertext cipher2 = scheme.encrypt(mvec2, slots, logp, logQ);
+//	Ciphertext cipher = scheme.mult(cipher1, cipher2);
+//	scheme.reScaleByAndEqual(cipher, logp);
+	complex<double>* dvec = scheme.decrypt(secretKey, cipher);
 
-//	TestScheme::testPowerBatch(13, 155, 30, 13, 3);
-
-	//-----------------------------------------
-
-	/*
-	 * Params: logN, logQ, logp, logDegree, logSlots
-	 * Suggested: 13, 155, 30, 4, 3
-	 * Suggested: 15, 618, 56, 10, 3
-	 */
-
-//	TestScheme::testProdOfPo2Batch(13, 155, 30, 4, 3);
-
-	/*
-	 * Params: logN, logQ, logp, degree, logSlots
-	 * Suggested: 13, 155, 30, 13, 3
-	 * Suggested: 15, 618, 56, 903, 3
-	 */
-
-//	TestScheme::testProdBatch(13, 155, 30, 13, 3);
-
-	//-----------------------------------------
-
-	/*
-	 * Params: logN, logQ, logp, invSteps, logSlots
-	 * Suggested: 14, 255, 25, 8, 3
-	 * Suggested: 15, 325, 32, 8, 3
-	 */
-
-//	TestScheme::testInverseBatch(14, 255, 25, 8, 3);
-
-	//-----------------------------------------
-
-	/*
-	 * Params: logN, logQ, logp, degree, logSlots
-	 * Suggested: 13, 155, 30, 7, 3
-	 */
-
-//	TestScheme::testLogarithmBatch(13, 155, 30, 7, 3);
-
-	//-----------------------------------------
-
-	/*
-	 * Params: logN, logQ, logp, degree, logSlots
-	 * Suggested: 13, 155, 30, 7, 3
-	 */
-
-//	TestScheme::testExponentBatch(13, 155, 30, 7, 3);
-
-	//-----------------------------------------
-
-	/*
-	 * Params: logN, logQ, logp, degree, logSlots
-	 * Suggested: 13, 155, 30, 7, 3
-	 */
-
-//	TestScheme::testSigmoidBatch(13, 155, 30, 7, 3);
-//	TestScheme::testSigmoidBatchLazy(13, 155, 30, 7, 3);
-
-	//-----------------------------------------
-
-	/*
-	 * Params: logN, logQ, logp, logSlots, logFFTdim
-	 * Suggested: 13, 100, 42, 3, 4;
-	 */
-
-//	TestScheme::testFFTBatch(13, 100, 42, 3, 4);
-//	TestScheme::testFFTBatchLazy(13, 100, 42, 3, 4);
-
-	/*
-	 * Params: logN, logQ, logp, logSlots, logFFTdim, logHdim
-	 * Suggested: 13, 140, 42, 3, 3, 2;
-	 */
-
-//	TestScheme::testFFTBatchLazyMultipleHadamard(13, 140, 42, 3, 3, 2);
-
-	/*
-	 * Params: logN, logQ, logp, logSlots
-	 * Suggested: 13, 65, 30, 3
-	 */
-
-//	TestScheme::testWriteAndRead(15, 620, 30, 3);
-
+#endif
+	vector<double> diffvec(slots);
+	double avg = 0.0;
+	for (long i = 0; i < slots; ++i) {
+		diffvec[i] = sqrt(pow(abs(mvec[i].real() - dvec[i].real()), 2) +
+	                      pow(abs(mvec[i].imag() - dvec[i].imag()), 2));
+	    avg += diffvec[i];
+	}
+	avg /= static_cast<double>(slots);
+	double log2avg = log2(avg);
+	std::cerr << -round(log2avg * 10) / 10 << std::endl;
 	return 0;
 }

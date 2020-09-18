@@ -45,7 +45,9 @@ void NumUtils::sampleZO(ZZX& res, const long size) {
 	res.SetLength(size);
 	ZZ tmp = RandomBits_ZZ(2 * size);
 	for (long i = 0; i < size; ++i) {
-		res.rep[i] = (bit(tmp, 2 * i) == 0) ? ZZ(0) : (bit(tmp, 2 * i + 1) == 0) ? ZZ(1) : ZZ(-1);
+		r = ((double) rand() / (RAND_MAX));
+		res.rep[i] = (r > 2.0/3) ? ZZ(0) : (r > 1.0/3) ? ZZ(1) : ZZ(-1);
+//		res.rep[i] = (bit(tmp, 2 * i) == 0) ? ZZ(0) : (bit(tmp, 2 * i + 1) == 0) ? ZZ(1) : ZZ(-1);
 	}
 }
 
