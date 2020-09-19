@@ -230,14 +230,27 @@ void Ring2Utils::doubleAndEqual(ZZX& p, ZZ& mod, const long degree) {
 
 void Ring2Utils::rightShift(ZZX& res, ZZX& p, const long bits, const long degree) {
 	res.SetLength(degree);
+//	ZZ tmp;
 	for (long i = 0; i < degree; ++i) {
 		RightShift(res.rep[i], p.rep[i], bits);
+//		LeftShift(tmp, res.rep[i], bits);
+//		std::cerr << NumBits(p.rep[i] - tmp) << "," << bits << std::endl;
+//		if(NumBits(p.rep[i] - tmp) == bits) {
+//		  res.rep[i] = res.rep[i] + 1;
+//		}
 	}
 }
 
 void Ring2Utils::rightShiftAndEqual(ZZX& p, const long bits, const long degree) {
-	for (long i = 0; i < degree; ++i) {
+//  ZZ tmp, tmp2;
+  for (long i = 0; i < degree; ++i) {
+//    tmp2 = p.rep[i];
 		RightShift(p.rep[i], p.rep[i], bits);
+//		LeftShift(tmp, p.rep[i], bits);
+//    std::cerr << NumBits(tmp2 - tmp) << "," << bits << std::endl;
+//    if(NumBits(tmp2 - tmp) == bits) {
+//      p.rep[i] = p.rep[i] + 1;
+//    }
 	}
 }
 

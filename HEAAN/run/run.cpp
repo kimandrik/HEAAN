@@ -14,8 +14,8 @@ using namespace std;
 using namespace NTL;
 
 int main() {
-	long logN = 15;
-	long logQ = 150;
+	long logN = 14;
+	long logQ = 160;
 	long logp = 40;
 	long logSlots = logN-1;
 	Context context(logN, logQ);
@@ -24,12 +24,14 @@ int main() {
 	Scheme scheme(secretKey, context);
 
 	long slots = (1 << logSlots);
-#if 0
-	complex<double>* mvec1 = EvaluatorUtils::randomCircleArray(slots);
-	complex<double>* mvec2 = EvaluatorUtils::randomCircleArray(slots);
+#if 1
+  complex<double>* mvec1 = EvaluatorUtils::randomCircleArray(slots);
+  complex<double>* mvec2 = EvaluatorUtils::randomCircleArray(slots);
+  complex<double>* mvec3 = EvaluatorUtils::randomCircleArray(slots);
+  complex<double>* mvec4 = EvaluatorUtils::randomCircleArray(slots);
 	complex<double>* mvec = new complex<double>[slots];
 	for(long i = 0; i < slots; i++) {
-		mvec[i] = mvec1[i] * mvec2[i];
+		mvec[i] = mvec1[i] * mvec2[i] * mvec3[i] * mvec4[i];
 	}
 #else
 	complex<double>* mvec = EvaluatorUtils::randomCircleArray(slots);
@@ -44,10 +46,14 @@ int main() {
 	Ring2Utils::sub(bxkey, exkey, bxkey, context.Q, context.N);
 
 	ZZX mx1 = context.encode(mvec1, slots, logp);
-	ZZX mx2 = context.encode(mvec2, slots, logp);
+  ZZX mx2 = context.encode(mvec2, slots, logp);
+  ZZX mx3 = context.encode(mvec3, slots, logp);
+  ZZX mx4 = context.encode(mvec4, slots, logp);
 
-	Plaintext msg1(mx1, logp, logQ, slots, false);
-	Plaintext msg2(mx2, logp, logQ, slots, false);
+  Plaintext msg1(mx1, logp, logQ, slots, false);
+  Plaintext msg2(mx2, logp, logQ, slots, false);
+  Plaintext msg3(mx3, logp, logQ, slots, false);
+  Plaintext msg4(mx4, logp, logQ, slots, false);
 
 	ZZX ax1, bx1, vx1, ex1;
 
@@ -77,21 +83,52 @@ int main() {
 
 	Ciphertext cipher2(ax2, bx2, logp, logQ, slots, true);
 
-	Ciphertext cipher = scheme.mult(cipher1, cipher2);
-	scheme.reScaleByAndEqual(cipher, logp);
-	complex<double>* dvec = scheme.decrypt(secretKey, cipher);
+  ZZX ax3, bx3, vx3, ex3;
+
+  NumUtils::sampleZO(vx3, context.N);
+  Ring2Utils::mult(ax3, vx3, axkey, context.Q, context.N);
+  NumUtils::sampleGauss(ex3, context.N, context.sigma);
+  Ring2Utils::addAndEqual(ax3, ex3, context.Q, context.N);
+
+  Ring2Utils::mult(bx3, vx3, bxkey, context.Q, context.N);
+  NumUtils::sampleGauss(ex3, context.N, context.sigma);
+  Ring2Utils::addAndEqual(bx3, ex3, context.Q, context.N);
+  Ring2Utils::addAndEqual(bx3, mx3, context.Q, context.N);
+
+  Ciphertext cipher3(ax3, bx3, logp, logQ, slots, true);
+
+  ZZX ax4, bx4, vx4, ex4;
+
+  NumUtils::sampleZO(vx4, context.N);
+  Ring2Utils::mult(ax4, vx4, axkey, context.Q, context.N);
+  NumUtils::sampleGauss(ex4, context.N, context.sigma);
+  Ring2Utils::addAndEqual(ax4, ex4, context.Q, context.N);
+
+  Ring2Utils::mult(bx4, vx4, bxkey, context.Q, context.N);
+  NumUtils::sampleGauss(ex4, context.N, context.sigma);
+  Ring2Utils::addAndEqual(bx4, ex4, context.Q, context.N);
+  Ring2Utils::addAndEqual(bx4, mx4, context.Q, context.N);
+
+  Ciphertext cipher4(ax4, bx4, logp, logQ, slots, true);
 
 #else
 
-	Ciphertext cipher = scheme.encrypt(mvec, slots, logp, logQ);
+//	Ciphertext cipher = scheme.encrypt(mvec, slots, logp, logQ);
 
-//	Ciphertext cipher1 = scheme.encrypt(mvec1, slots, logp, logQ);
-//	Ciphertext cipher2 = scheme.encrypt(mvec2, slots, logp, logQ);
-//	Ciphertext cipher = scheme.mult(cipher1, cipher2);
-//	scheme.reScaleByAndEqual(cipher, logp);
-	complex<double>* dvec = scheme.decrypt(secretKey, cipher);
+	Ciphertext cipher1 = scheme.encrypt(mvec1, slots, logp, logQ);
+	Ciphertext cipher2 = scheme.encrypt(mvec2, slots, logp, logQ);
+  Ciphertext cipher3 = scheme.encrypt(mvec3, slots, logp, logQ);
+  Ciphertext cipher4 = scheme.encrypt(mvec4, slots, logp, logQ);
 
 #endif
+  Ciphertext cipher12 = scheme.mult(cipher1, cipher2);
+  Ciphertext cipher34 = scheme.mult(cipher3, cipher4);
+  scheme.reScaleByAndEqual(cipher12, logp);
+  scheme.reScaleByAndEqual(cipher34, logp);
+  Ciphertext cipher = scheme.mult(cipher12, cipher34);
+  scheme.reScaleByAndEqual(cipher, logp);
+	complex<double>* dvec = scheme.decrypt(secretKey, cipher);
+
 	vector<double> diffvec(slots);
 	double avg = 0.0;
 	for (long i = 0; i < slots; ++i) {
